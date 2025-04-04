@@ -1,14 +1,19 @@
 "use client"
 
+import { useState } from "react"
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from "react-native"
 import { Ionicons } from "@expo/vector-icons"
 import { useSafeAreaInsets } from "react-native-safe-area-context"
-import { Colors } from "@/constants/Colors"
+import  { Colors } from "@/constants/Colors"
 import { SalesCard } from "@/components/SalesCard"
 import { RecentSaleItem } from "@/components/RecentSaleItem"
 import { useAuth } from "@/context/AuthContext"
+import { FirebaseTest } from "@/components/FirebaseTest"
+import { populateMockData } from "@/services/mockDataService"
+import { StorageIndicator } from "@/components/StorageIndicator"
+import { AuthStatus } from "@/components/AuthStatu" // Add this import
 
-// Mock data
+// Mock data for now
 const salesData = {
   totalRevenue: 86231.89,
   totalSales: 1223.65,
@@ -27,6 +32,22 @@ const recentSales = [
 export default function DashboardScreen() {
   const insets = useSafeAreaInsets()
   const { user } = useAuth()
+  const [loading, setLoading] = useState(false)
+  const [mockDataStatus, setMockDataStatus] = useState<string | null>(null)
+
+  const handlePopulateMockData = async () => {
+    try {
+      setLoading(true)
+      setMockDataStatus("Adding mock data...")
+      await populateMockData()
+      setMockDataStatus("Mock data added successfully!")
+    } catch (error) {
+      console.error("Error adding mock data:", error)
+      setMockDataStatus("Error adding mock data. See console for details.")
+    } finally {
+      setLoading(false)
+    }
+  }
 
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>
@@ -44,7 +65,21 @@ export default function DashboardScreen() {
         </View>
       </View>
 
+      <StorageIndicator />
+
+      {/* Add the AuthStatus component here */}
+      <AuthStatus />
+
       <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
+        <FirebaseTest />
+
+        <View style={styles.mockDataContainer}>
+          <TouchableOpacity style={styles.mockDataButton} onPress={handlePopulateMockData} disabled={loading}>
+            <Text style={styles.mockDataButtonText}>{loading ? "Adding Data..." : "Populate Mock Data"}</Text>
+          </TouchableOpacity>
+          {mockDataStatus && <Text style={styles.mockDataStatus}>{mockDataStatus}</Text>}
+        </View>
+
         <View style={styles.cardsContainer}>
           <SalesCard
             title="Total Revenue"
@@ -138,6 +173,28 @@ const styles = StyleSheet.create({
   },
   scrollView: {
     flex: 1,
+  },
+  mockDataContainer: {
+    padding: 16,
+    backgroundColor: "#f0f8ff",
+    margin: 16,
+    borderRadius: 8,
+    alignItems: "center",
+  },
+  mockDataButton: {
+    backgroundColor: Colors.secondary,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 4,
+  },
+  mockDataButtonText: {
+    color: "#fff",
+    fontFamily: "Inter-Medium",
+  },
+  mockDataStatus: {
+    marginTop: 8,
+    fontFamily: "Inter-Regular",
+    color: Colors.text,
   },
   cardsContainer: {
     flexDirection: "row",

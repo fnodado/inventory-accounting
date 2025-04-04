@@ -5,6 +5,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context"
 import { Ionicons } from "@expo/vector-icons"
 import { Colors } from "@/constants/Colors"
 import { useAuth } from "@/context/AuthContext"
+import { StorageSwitcher } from "@/components/StorageSwitcher"
 
 export default function SettingsScreen() {
   const insets = useSafeAreaInsets()
@@ -17,6 +18,9 @@ export default function SettingsScreen() {
       </View>
 
       <ScrollView style={styles.scrollView}>
+        {/* Add the StorageSwitcher here */}
+        <StorageSwitcher />
+
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Account</Text>
 

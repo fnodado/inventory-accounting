@@ -2,13 +2,8 @@
 
 import { createContext, useContext, useState, useEffect, type ReactNode } from "react"
 import { router } from "expo-router"
-import { secureStorage } from "@/utils/secureStorage"
-
-interface User {
-  id: string
-  email: string
-  name: string
-}
+import * as authService from "@/services/authStorageService"
+import type { User } from "@/services/authStorageService"
 
 interface AuthContextType {
   user: User | null
@@ -24,60 +19,39 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null)
   const [isLoading, setIsLoading] = useState(true)
 
+  // Initialize the storage and load user on startup
   useEffect(() => {
-    // Check if user is already logged in
-    const loadUser = async () => {
+    const initialize = async () => {
       try {
-        const userString = await secureStorage.getItem("user")
-        if (userString) {
-          const userData = JSON.parse(userString)
-          setUser(userData)
-        }
+        // Initialize the auth storage
+        await authService.initializeAuthStorage()
+
+        // Load current user from AsyncStorage
+        const currentUser = await authService.getCurrentUser()
+        setUser(currentUser)
       } catch (error) {
-        console.error("Error loading user:", error)
+        console.error("Error initializing auth:", error)
       } finally {
         setIsLoading(false)
       }
     }
 
-    loadUser()
+    initialize()
   }, [])
 
   const signIn = async (email: string, password: string) => {
     try {
       setIsLoading(true)
+      console.log("Attempting to sign in:", email)
 
-      // Check for demo credentials
-      if (
-        (email === "admin@example.com" && password === "password") ||
-        (email === "admin@gmail.com" && password === "admin")
-      ) {
-        const userData: User = {
-          id: "1",
-          email: "admin@example.com",
-          name: "Admin User",
-        }
+      // Sign in with our AsyncStorage service
+      const authenticatedUser = await authService.signIn(email, password)
+      setUser(authenticatedUser)
 
-        await secureStorage.setItem("user", JSON.stringify(userData))
-        setUser(userData)
-        return
-      }
+      console.log("Sign in successful")
 
-      // In a real app, you would make an API call to authenticate
-      // For demo purposes, we'll just simulate a successful login
-      if (email && password) {
-        const userData: User = {
-          id: "1",
-          email,
-          name: "Demo User",
-        }
-
-        await secureStorage.setItem("user", JSON.stringify(userData))
-        setUser(userData)
-        return
-      }
-
-      throw new Error("Invalid credentials")
+      // Navigate to the main app
+      router.replace("/(tabs)")
     } catch (error) {
       console.error("Sign in error:", error)
       throw error
@@ -89,22 +63,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const signUp = async (email: string, password: string, name: string) => {
     try {
       setIsLoading(true)
+      console.log("Attempting to sign up:", email)
 
-      // In a real app, you would make an API call to register
-      // For demo purposes, we'll just simulate a successful registration
-      if (email && password && name) {
-        const userData: User = {
-          id: "1",
-          email,
-          name,
-        }
+      // Sign up with our AsyncStorage service
+      const newUser = await authService.signUp(email, password, name)
+      setUser(newUser)
 
-        await secureStorage.setItem("user", JSON.stringify(userData))
-        setUser(userData)
-        return
-      }
+      console.log("Sign up successful")
 
-      throw new Error("Invalid registration data")
+      // Navigate to the main app
+      router.replace("/(tabs)")
     } catch (error) {
       console.error("Sign up error:", error)
       throw error
@@ -116,8 +84,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const signOut = async () => {
     try {
       setIsLoading(true)
-      await secureStorage.removeItem("user")
+      console.log("Attempting to sign out")
+
+      // Sign out with our AsyncStorage service
+      await authService.signOut()
+
+      // Update state
       setUser(null)
+
+      console.log("Sign out successful")
       router.replace("/(auth)/login")
     } catch (error) {
       console.error("Sign out error:", error)

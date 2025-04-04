@@ -1,128 +1,141 @@
 "use client"
 
 import { useState } from "react"
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, Image } from "react-native"
-import { Link, router } from "expo-router"
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, Image, ScrollView, Alert } from "react-native"
+import { Link } from "expo-router"
 import { Ionicons } from "@expo/vector-icons"
 import { Colors } from "@/constants/Colors"
 import { useAuth } from "@/context/AuthContext"
-import { Alert, AlertDescription } from '@/components/ui/alert';
 
 export default function LoginScreen() {
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
   const [showPassword, setShowPassword] = useState(false)
+  const [isLoading, setIsLoading] = useState(false)
   const { signIn } = useAuth()
-  const [error, setError] = useState('');
-
-  const validateForm = () => {
-    if (!email) {
-      setError('Please enter your email');
-      return false;
-    }
-    if (!password) {
-      setError('Please enter your password');
-      return false;
-    }
-    if (!/\S+@\S+\.\S+/.test(email)) {
-      setError('Please enter a valid email address');
-      return false;
-    }
-    return true;
-  };
 
   const handleLogin = async () => {
-    if (!validateForm()) return;
-
-    setError('');
-
     try {
-    //   await signIn(email, password)
+      // Form validation
+      if (!email.trim()) {
+        Alert.alert("Error", "Please enter your email")
+        return
+      }
 
-    
-      router.replace("/(tabs)")
+      if (!password.trim()) {
+        Alert.alert("Error", "Please enter your password")
+        return
+      }
+
+      // Show loading state
+      setIsLoading(true)
+
+      // Call the signIn function from AuthContext
+      await signIn(email, password)
+
+      // The navigation is handled in the AuthContext
     } catch (error) {
       console.error("Login failed:", error)
+
+      // Extract the error message
+      let errorMessage = "An unknown error occurred"
+      if (error instanceof Error) {
+        errorMessage = error.message
+      }
+
+      Alert.alert("Login Failed", errorMessage)
+    } finally {
+      setIsLoading(false)
     }
   }
 
   return (
-    <View style={styles.container}>
-      <View style={styles.formContainer}>
-        <View style={styles.logoContainer}>
-          <Image />
-          <Text style={styles.logoText}>Inventory & Accounting</Text>
-        </View>
-
-        <Text style={styles.title}>Login</Text>
-        <Text style={styles.subtitle}>Enter your credentials to access your account</Text>
-
-        {error && (
-            <Alert variant="destructive" style={styles.errorAlert}>
-              <AlertDescription>{error}</AlertDescription>
-            </Alert>
-          )}
-
-        <View style={styles.inputContainer}>
-          <Text style={styles.label}>Email</Text>
-          <TextInput
-            style={styles.input}
-            placeholder="e.g. name@example.com"
-            value={email}
-            onChangeText={setEmail}
-            keyboardType="email-address"
-            autoCapitalize="none"
-          />
-        </View>
-
-        <View style={styles.inputContainer}>
-          <View style={styles.passwordHeader}>
-            <Text style={styles.label}>Password</Text>
-            <TouchableOpacity>
-              <Text style={styles.forgotPassword}>Forgot password?</Text>
-            </TouchableOpacity>
+    <ScrollView contentContainerStyle={styles.scrollContainer}>
+      <View style={styles.container}>
+        <View style={styles.formContainer}>
+          <View style={styles.logoContainer}>
+            <Image />
+            <Text style={styles.logoText}>Inventory & Accounting</Text>
           </View>
-          <View style={styles.passwordInputContainer}>
+
+          <Text style={styles.title}>Login</Text>
+          <Text style={styles.subtitle}>Enter your credentials to access your account</Text>
+
+          <View style={styles.inputContainer}>
+            <Text style={styles.label}>Email</Text>
             <TextInput
-              style={styles.passwordInput}
-              placeholder="••••••••"
-              value={password}
-              onChangeText={setPassword}
-              secureTextEntry={!showPassword}
+              style={styles.input}
+              placeholder="e.g. name@example.com"
+              value={email}
+              onChangeText={setEmail}
+              keyboardType="email-address"
               autoCapitalize="none"
+              editable={!isLoading}
             />
-            <TouchableOpacity style={styles.eyeIcon} onPress={() => setShowPassword(!showPassword)}>
-              <Ionicons name={showPassword ? "eye-off-outline" : "eye-outline"} size={20} color={Colors.gray} />
-            </TouchableOpacity>
           </View>
+
+          <View style={styles.inputContainer}>
+            <View style={styles.passwordHeader}>
+              <Text style={styles.label}>Password</Text>
+              <TouchableOpacity disabled={isLoading}>
+                <Text style={styles.forgotPassword}>Forgot password?</Text>
+              </TouchableOpacity>
+            </View>
+            <View style={styles.passwordInputContainer}>
+              <TextInput
+                style={styles.passwordInput}
+                placeholder="••••••••"
+                value={password}
+                onChangeText={setPassword}
+                secureTextEntry={!showPassword}
+                autoCapitalize="none"
+                editable={!isLoading}
+              />
+              <TouchableOpacity
+                style={styles.eyeIcon}
+                onPress={() => setShowPassword(!showPassword)}
+                disabled={isLoading}
+              >
+                <Ionicons name={showPassword ? "eye-off-outline" : "eye-outline"} size={20} color={Colors.gray} />
+              </TouchableOpacity>
+            </View>
+          </View>
+
+          <TouchableOpacity
+            style={[styles.loginButton, isLoading && styles.disabledButton]}
+            onPress={handleLogin}
+            disabled={isLoading}
+          >
+            <Text style={styles.loginButtonText}>{isLoading ? "Logging in..." : "Login"}</Text>
+          </TouchableOpacity>
+
+          <View style={styles.signupContainer}>
+            <Text style={styles.signupText}>Don't have an account? </Text>
+            <Link href="/signup" asChild>
+              <TouchableOpacity disabled={isLoading}>
+                <Text style={styles.signupLink}>Sign up</Text>
+              </TouchableOpacity>
+            </Link>
+          </View>
+
+          <View style={styles.divider}>
+            <View style={styles.dividerLine} />
+            <Text style={styles.dividerText}>Demo Credentials</Text>
+            <View style={styles.dividerLine} />
+          </View>
+
+          <Text style={styles.privacyText}>Email: admin@example.com • Password: password</Text>
+          <Text style={styles.privacyText}>Email: admin@gmail.com • Password: admin</Text>
         </View>
-
-        <TouchableOpacity style={styles.loginButton} onPress={handleLogin}>
-          <Text style={styles.loginButtonText}>Login</Text>
-        </TouchableOpacity>
-
-        <View style={styles.signupContainer}>
-          <Text style={styles.signupText}>Don't have an account? </Text>
-          <Link href="/signup" asChild>
-            <TouchableOpacity>
-              <Text style={styles.signupLink}>Sign up</Text>
-            </TouchableOpacity>
-          </Link>
-        </View>
-
-        <View style={styles.divider}>
-          <View style={styles.dividerLine} />
-          <Text style={styles.dividerText}>Privacy Statement</Text>
-          <View style={styles.dividerLine} />
-        </View>
-
-        <Text style={styles.privacyText}>Email: admin@example.com • Password: password</Text>
       </View>
-    </View>
+    </ScrollView>
   )
 }
 
 const styles = StyleSheet.create({
+  scrollContainer: {
+    flexGrow: 1,
+  },
   container: {
     flex: 1,
     backgroundColor: "#fff",
@@ -220,6 +233,9 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     marginTop: 8,
   },
+  disabledButton: {
+    backgroundColor: "#ccc",
+  },
   loginButtonText: {
     color: "#fff",
     fontSize: 14,
@@ -262,12 +278,7 @@ const styles = StyleSheet.create({
     fontFamily: "Inter-Regular",
     color: Colors.gray,
     textAlign: "center",
-  },
-  errorAlert: {
-    backgroundColor: '#FEE2E2',
-    padding: 12,
-    borderRadius: 8,
-    marginBottom: 16,
+    marginBottom: 4,
   },
 })
 

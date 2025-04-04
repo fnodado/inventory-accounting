@@ -1,8 +1,8 @@
 "use client"
 
 import { useState } from "react"
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, Image, ScrollView } from "react-native"
-import { Link, router } from "expo-router"
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, Image, ScrollView, Alert } from "react-native"
+import { Link } from "expo-router"
 import { Ionicons } from "@expo/vector-icons"
 import { Colors } from "@/constants/Colors"
 import { useAuth } from "@/context/AuthContext"
@@ -15,24 +15,57 @@ export default function SignupScreen() {
   const [showPassword, setShowPassword] = useState(false)
   const [showConfirmPassword, setShowConfirmPassword] = useState(false)
   const [agreeToTerms, setAgreeToTerms] = useState(false)
+  const [isLoading, setIsLoading] = useState(false)
   const { signUp } = useAuth()
 
   const handleSignup = async () => {
-    if (password !== confirmPassword) {
-      console.error("Passwords do not match")
-      return
-    }
-
-    if (!agreeToTerms) {
-      console.error("You must agree to the terms")
-      return
-    }
-
     try {
+      // Form validation
+      if (!fullName.trim()) {
+        Alert.alert("Error", "Please enter your full name")
+        return
+      }
+
+      if (!email.trim()) {
+        Alert.alert("Error", "Please enter your email")
+        return
+      }
+
+      if (password.length < 6) {
+        Alert.alert("Error", "Password must be at least 6 characters")
+        return
+      }
+
+      if (password !== confirmPassword) {
+        Alert.alert("Error", "Passwords do not match")
+        return
+      }
+
+      if (!agreeToTerms) {
+        Alert.alert("Error", "You must agree to the terms and conditions")
+        return
+      }
+
+      // Show loading state
+      setIsLoading(true)
+      console.log("Attempting to sign up:", email)
+
+      // Call the signUp function from AuthContext
       await signUp(email, password, fullName)
-      router.replace("/(tabs)")
+
+      // The navigation is handled in the AuthContext
     } catch (error) {
       console.error("Signup failed:", error)
+
+      // Extract the error message
+      let errorMessage = "An unknown error occurred"
+      if (error instanceof Error) {
+        errorMessage = error.message
+      }
+
+      Alert.alert("Signup Failed", errorMessage)
+    } finally {
+      setIsLoading(false)
     }
   }
 
@@ -50,7 +83,13 @@ export default function SignupScreen() {
 
           <View style={styles.inputContainer}>
             <Text style={styles.label}>Full Name</Text>
-            <TextInput style={styles.input} placeholder="e.g. John Smith" value={fullName} onChangeText={setFullName} />
+            <TextInput
+              style={styles.input}
+              placeholder="e.g. John Smith"
+              value={fullName}
+              onChangeText={setFullName}
+              editable={!isLoading}
+            />
           </View>
 
           <View style={styles.inputContainer}>
@@ -62,6 +101,7 @@ export default function SignupScreen() {
               onChangeText={setEmail}
               keyboardType="email-address"
               autoCapitalize="none"
+              editable={!isLoading}
             />
           </View>
 
@@ -75,8 +115,13 @@ export default function SignupScreen() {
                 onChangeText={setPassword}
                 secureTextEntry={!showPassword}
                 autoCapitalize="none"
+                editable={!isLoading}
               />
-              <TouchableOpacity style={styles.eyeIcon} onPress={() => setShowPassword(!showPassword)}>
+              <TouchableOpacity
+                style={styles.eyeIcon}
+                onPress={() => setShowPassword(!showPassword)}
+                disabled={isLoading}
+              >
                 <Ionicons name={showPassword ? "eye-off-outline" : "eye-outline"} size={20} color={Colors.gray} />
               </TouchableOpacity>
             </View>
@@ -92,8 +137,13 @@ export default function SignupScreen() {
                 onChangeText={setConfirmPassword}
                 secureTextEntry={!showConfirmPassword}
                 autoCapitalize="none"
+                editable={!isLoading}
               />
-              <TouchableOpacity style={styles.eyeIcon} onPress={() => setShowConfirmPassword(!showConfirmPassword)}>
+              <TouchableOpacity
+                style={styles.eyeIcon}
+                onPress={() => setShowConfirmPassword(!showConfirmPassword)}
+                disabled={isLoading}
+              >
                 <Ionicons
                   name={showConfirmPassword ? "eye-off-outline" : "eye-outline"}
                   size={20}
@@ -103,7 +153,11 @@ export default function SignupScreen() {
             </View>
           </View>
 
-          <TouchableOpacity style={styles.termsContainer} onPress={() => setAgreeToTerms(!agreeToTerms)}>
+          <TouchableOpacity
+            style={styles.termsContainer}
+            onPress={() => setAgreeToTerms(!agreeToTerms)}
+            disabled={isLoading}
+          >
             <View style={styles.checkbox}>
               {agreeToTerms && <Ionicons name="checkmark" size={16} color={Colors.primary} />}
             </View>
@@ -111,17 +165,17 @@ export default function SignupScreen() {
           </TouchableOpacity>
 
           <TouchableOpacity
-            style={[styles.signupButton, !agreeToTerms && styles.disabledButton]}
+            style={[styles.signupButton, (!agreeToTerms || isLoading) && styles.disabledButton]}
             onPress={handleSignup}
-            disabled={!agreeToTerms}
+            disabled={!agreeToTerms || isLoading}
           >
-            <Text style={styles.signupButtonText}>Create account</Text>
+            <Text style={styles.signupButtonText}>{isLoading ? "Creating account..." : "Create account"}</Text>
           </TouchableOpacity>
 
           <View style={styles.loginContainer}>
             <Text style={styles.loginText}>Already have an account? </Text>
             <Link href="/login" asChild>
-              <TouchableOpacity>
+              <TouchableOpacity disabled={isLoading}>
                 <Text style={styles.loginLink}>Login</Text>
               </TouchableOpacity>
             </Link>
